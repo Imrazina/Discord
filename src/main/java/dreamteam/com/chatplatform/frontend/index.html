@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>WebSocket Chat</h2>
+
+<div>
+    <input type="text" id="username" placeholder="Введите имя">
+    <input type="text" id="message" placeholder="Введите сообщение">
+    <button onclick="sendMessage()">Отправить</button>
+</div>
+
+<h3>Чат:</h3>
+<ul id="messages"></ul>
+
+<script>
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('http://localhost:8080/ws'); // Подключаемся к серверу
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function () {
+            console.log("Connected!");
+
+            // Подписываемся на получение сообщений
+            stompClient.subscribe('/topic/messages', function (message) {
+                showMessage(JSON.parse(message.body));
+            });
+        });
+    }
+
+    function sendMessage() {
+        const username = document.getElementById("username").value || "Anonymous";
+        const message = document.getElementById("message").value;
+
+        if (stompClient && message.trim() !== "") {
+            stompClient.send("/app/chat", {}, JSON.stringify({
+                sender: username,
+                content: message
+            }));
+            document.getElementById("message").value = "";
+        }
+    }
+
+    function showMessage(message) {
+        const li = document.createElement("li");
+        li.textContent = `${message.sender}: ${message.content} (${message.timestamp})`;
+        document.getElementById("messages").appendChild(li);
+    }
+
+    window.onload = connect; // Автоматическое подключение при загрузке страницы
+</script>
+</body>
+</html>
