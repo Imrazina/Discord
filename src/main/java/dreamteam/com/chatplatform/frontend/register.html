@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+</head>
+<body>
+<h2>Регистрация</h2>
+
+<input type="text" id="username" placeholder="Имя пользователя"><br>
+<input type="email" id="email" placeholder="Email"><br>
+<input type="password" id="password" placeholder="Пароль"><br>
+<button onclick="register()">Зарегистрироваться</button>
+
+<p id="response"></p>
+
+<script>
+    function register() {
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        fetch("http://localhost:8082/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email, password })
+        })
+            .then(response => response.text())
+            .then(data => document.getElementById("response").innerText = data)
+            .catch(error => console.error("Ошибка:", error));
+    }
+</script>
+
+</body>
+</html>

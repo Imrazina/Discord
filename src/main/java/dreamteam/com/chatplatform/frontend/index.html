@@ -11,10 +11,10 @@
 <h2>WebSocket Chat</h2>
 
 <div>
-    <input type="text" id="username" placeholder="Введите имя">
     <input type="text" id="message" placeholder="Введите сообщение">
     <button onclick="sendMessage()">Отправить</button>
 </div>
+<a href="register.html">Регистрация</a> <!-- исправлен путь -->
 
 <h3>Чат:</h3>
 <ul id="messages"></ul>
@@ -23,27 +23,38 @@
     let stompClient = null;
 
     function connect() {
-        const socket = new SockJS('http://localhost:8080/ws'); // Подключаемся к серверу
+        const token = localStorage.getItem("jwt");
+        if (!token) {
+            alert("Вы не вошли в систему! Пожалуйста, авторизуйтесь.");
+            window.location.href = "login.html"; // Перенаправление на страницу входа
+            return;
+        }
+
+        const socket = new SockJS("http://localhost:8082/ws"); // WebSocket URL
         stompClient = Stomp.over(socket);
 
-        stompClient.connect({}, function () {
-            console.log("Connected!");
+        stompClient.connect(
+            { Authorization: "Bearer " + token }, // Передаем заголовок с токеном
+            function () {
+                console.log("Connected!");
 
-            // Подписываемся на получение сообщений
-            stompClient.subscribe('/topic/messages', function (message) {
-                showMessage(JSON.parse(message.body));
-            });
-        });
+                stompClient.subscribe("/topic/messages", function (message) {
+                    showMessage(JSON.parse(message.body));
+                });
+            },
+            function (error) {
+                console.error("Ошибка подключения: ", error);
+                alert("Ошибка подключения к WebSocket!");
+            }
+        );
     }
 
     function sendMessage() {
-        const username = document.getElementById("username").value || "Anonymous";
         const message = document.getElementById("message").value;
 
         if (stompClient && message.trim() !== "") {
             stompClient.send("/app/chat", {}, JSON.stringify({
-                sender: username,
-                content: message
+                content: message // Больше не передаем sender
             }));
             document.getElementById("message").value = "";
         }
@@ -55,7 +66,7 @@
         document.getElementById("messages").appendChild(li);
     }
 
-    window.onload = connect; // Автоматическое подключение при загрузке страницы
+    window.onload = connect; // Подключаемся к WebSocket при загрузке страницы
 </script>
 </body>
 </html>

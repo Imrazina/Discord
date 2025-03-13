@@ -15,5 +15,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  app:
+    build: .
+    container_name: chat-app
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/chat_db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SECRET_KEY=+h24lqa3+CvwC3HtPdPY6XqI07+65A1c5tghtfEdsNs=
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres_data:
