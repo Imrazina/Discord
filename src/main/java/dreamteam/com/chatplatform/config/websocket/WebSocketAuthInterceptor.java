@@ -1,4 +1,4 @@
-package dreamteam.com.chatplatform.config;
+package dreamteam.com.chatplatform.config.websocket;
 
 import dreamteam.com.chatplatform.config.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
