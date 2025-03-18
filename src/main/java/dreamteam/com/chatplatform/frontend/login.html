@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script>
+        async function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch("http://localhost:8082/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const text = await response.text();
+                console.log("Raw response:", text); // Логируем ответ
+                const data = JSON.parse(text);
+
+                if (response.ok) {
+                    localStorage.setItem("jwt", data.token);
+                    localStorage.setItem("username", username);
+                    alert("Login successful!");
+                    window.location.href = "index.html";
+                } else {
+                    alert(data.error || "Invalid username or password");
+                }
+            } catch (error) {
+                console.error("Ошибка:", error);
+                alert("Ошибка при входе в систему");
+            }
+        }
+
+
+    </script>
+</head>
+<body>
+<h2>Login</h2>
+<div>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
+<p>Don't have an account? <a href="register.html">Register</a></p>
+</body>
+</html>
