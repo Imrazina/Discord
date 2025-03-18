@@ -23,10 +23,10 @@ public class ChatConfig {
                 .orElseGet(() -> {
                     User newUser = new User();
                     newUser.setUsername(chatMessage.getSender().getUsername());
-                    return userRepository.save(newUser); // Сохраняем перед использованием
+                    return userRepository.save(newUser);
                 });
 
-        chatMessage.setSender(sender); // Теперь sender гарантированно сохранён
+        chatMessage.setSender(sender);
         chatMessageRepository.save(chatMessage); // Теперь можно сохранять сообщение
     }
 }

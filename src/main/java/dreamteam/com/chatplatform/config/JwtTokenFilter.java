@@ -1,6 +1,8 @@
 package dreamteam.com.chatplatform.config;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -11,11 +13,18 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.ServletServerHttpRequest;
+
+
 public class JwtTokenFilter implements HandshakeInterceptor {
-    private static final String SECRET_KEY = "+h24lqa3+CvwC3HtPdPY6XqI07+65A1c5tghtfEdsNs=";
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -44,9 +53,12 @@ public class JwtTokenFilter implements HandshakeInterceptor {
     }
 
     private String extractToken(ServerHttpRequest request) {
-        String query = request.getURI().getQuery();
-        if (query != null && query.startsWith("token=")) {
-            return query.substring(6);
+        if (request instanceof ServletServerHttpRequest) {
+            HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+            String authHeader = servletRequest.getHeader(HttpHeaders.AUTHORIZATION);
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                return authHeader.substring(7);
+            }
         }
         return null;
     }
@@ -54,16 +66,22 @@ public class JwtTokenFilter implements HandshakeInterceptor {
     private boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(SECRET_KEY) // Убедись, что `secretKey` совпадает с ключом генерации токенов
+                    .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)))
                     .build()
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
             return false;
-        } // Замени на свою логику
+        }
     }
 
     private String extractUsername(String token) {
-        return "TestUser"; // Замени на нормальный парсинг JWT
+        return Jwts.parserBuilder()
+                .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)))
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 }
+

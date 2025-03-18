@@ -17,7 +17,9 @@ import java.util.List;
 
 @Component
 public class JwtTokenProvider {
-    private static final String SECRET_KEY = "+h24lqa3+CvwC3HtPdPY6XqI07+65A1c5tghtfEdsNs=";
+
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
     private static final long EXPIRATION_TIME = 3600000;
 
     public boolean validateToken(String token) {
@@ -47,7 +49,7 @@ public class JwtTokenProvider {
                 .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -60,7 +62,7 @@ public class JwtTokenProvider {
                     .getBody();
 
             String username = claims.getSubject();
-            List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("USER")); // Пока просто заглушка
+            List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("USER"));
 
             System.out.println("Аутентификация WebSocket: " + username);
 

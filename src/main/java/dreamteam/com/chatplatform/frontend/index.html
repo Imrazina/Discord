@@ -24,45 +24,57 @@
 
     function connect() {
         const token = localStorage.getItem("jwt");
+
         if (!token) {
             alert("Вы не вошли в систему! Пожалуйста, авторизуйтесь.");
             window.location.href = "login.html"; // Перенаправление на страницу входа
             return;
         }
 
-        const socket = new SockJS("http://localhost:8082/ws"); // WebSocket URL
+        const socket = new WebSocket("ws://localhost:8082/ws");
         stompClient = Stomp.over(socket);
 
+        // Подключаемся к WebSocket с заголовком Authorization
+        console.log(token);
         stompClient.connect(
-            { Authorization: "Bearer " + token }, // Передаем заголовок с токеном
-            function () {
-                console.log("Connected!");
+            { Authorization: `Bearer ${token}` },
+            function (frame) {
+                console.log("✅ WebSocket подключен:", frame);
 
+                // Подписываемся на сообщения чата
                 stompClient.subscribe("/topic/messages", function (message) {
-                    showMessage(JSON.parse(message.body));
+                    try {
+                        const parsedMessage = JSON.parse(message.body);
+                        showMessage(parsedMessage);
+                    } catch (error) {
+                        console.error("Ошибка обработки сообщения:", error);
+                    }
                 });
+
+                // Отправляем тестовое сообщение (можно убрать)
+                stompClient.send("/app/chat", {}, JSON.stringify({ content: "Hello from client!" }));
             },
             function (error) {
-                console.error("Ошибка подключения: ", error);
-                alert("Ошибка подключения к WebSocket!");
+                console.error("❌ Ошибка подключения:", error);
+                alert("Ошибка подключения к WebSocket. Попробуйте позже.");
             }
         );
     }
 
     function sendMessage() {
-        const message = document.getElementById("message").value;
+        const message = document.getElementById("message").value.trim();
 
-        if (stompClient && message.trim() !== "") {
-            stompClient.send("/app/chat", {}, JSON.stringify({
-                content: message // Больше не передаем sender
-            }));
+        if (stompClient && stompClient.connected && message !== "") {
+            stompClient.send("/app/chat", {}, JSON.stringify({ content: message }));
             document.getElementById("message").value = "";
+        } else {
+            alert("Ошибка: WebSocket не подключен!");
         }
     }
 
     function showMessage(message) {
         const li = document.createElement("li");
-        li.textContent = `${message.sender}: ${message.content} (${message.timestamp})`;
+        li.textContent = `${message.sender || "Unknown"}: ${message.content} (${message.timestamp || "no timestamp"})`;
         document.getElementById("messages").appendChild(li);
     }
 

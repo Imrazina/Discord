@@ -1,11 +1,11 @@
-# Используем официальный образ OpenJDK 17
+# Используем базовый образ OpenJDK
 FROM openjdk:21-jdk-slim
 
-# Указываем рабочую директорию внутри контейнера
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем файл jar в контейнер
+# Копируем JAR-файл в контейнер
 COPY target/chat-platform-0.0.1-SNAPSHOT.jar app.jar
 
-# Запускаем Spring Boot приложение
-CMD ["java", "-jar", "app.jar"]
+# Указываем команду для запуска приложения
+ENTRYPOINT ["java", "-jar", "app.jar"]
