@@ -2,83 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Chat</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
 </head>
 <body>
 <h2>WebSocket Chat</h2>
-
-<div>
-    <input type="text" id="message" placeholder="Введите сообщение">
-    <button onclick="sendMessage()">Отправить</button>
-</div>
-<a href="register.html">Регистрация</a> <!-- исправлен путь -->
-
-<h3>Чат:</h3>
+<input type="text" id="message" placeholder="Enter message">
+<button id="sendBtn">Send</button> <!-- Добавил id -->
 <ul id="messages"></ul>
+<a href="register.html"> registart</a>
 
 <script>
-    let stompClient = null;
+    console.log("📡 Token from localStorage:", localStorage.getItem("token"));
 
-    function connect() {
-        const token = localStorage.getItem("jwt");
+    let stompClient = null; // 👈 Делаем переменную глобальной
 
-        if (!token) {
-            alert("Вы не вошли в систему! Пожалуйста, авторизуйтесь.");
-            window.location.href = "login.html"; // Перенаправление на страницу входа
-            return;
-        }
+    function connectWebSocket() {
+        const socket = new SockJS('http://localhost:8082/ws');
+        stompClient = Stomp.over(socket); // ✅ Сохраняем клиент в глобальную переменную
 
-        const socket = new WebSocket("ws://localhost:8082/ws");
-        stompClient = Stomp.over(socket);
+        const token = localStorage.getItem("token");
 
-        // Подключаемся к WebSocket с заголовком Authorization
-        console.log(token);
         stompClient.connect(
-            { Authorization: `Bearer ${token}` },
+            { Authorization: "Bearer " + token },
             function (frame) {
-                console.log("✅ WebSocket подключен:", frame);
-
-                // Подписываемся на сообщения чата
-                stompClient.subscribe("/topic/messages", function (message) {
-                    try {
-                        const parsedMessage = JSON.parse(message.body);
-                        showMessage(parsedMessage);
-                    } catch (error) {
-                        console.error("Ошибка обработки сообщения:", error);
-                    }
-                });
-
-                // Отправляем тестовое сообщение (можно убрать)
-                stompClient.send("/app/chat", {}, JSON.stringify({ content: "Hello from client!" }));
+                console.log("✅ Connected to WebSocket!");
             },
             function (error) {
-                console.error("❌ Ошибка подключения:", error);
-                alert("Ошибка подключения к WebSocket. Попробуйте позже.");
+                console.error("❌ WebSocket Error: ", error);
             }
         );
     }
 
     function sendMessage() {
-        const message = document.getElementById("message").value.trim();
-
-        if (stompClient && stompClient.connected && message !== "") {
-            stompClient.send("/app/chat", {}, JSON.stringify({ content: message }));
-            document.getElementById("message").value = "";
-        } else {
-            alert("Ошибка: WebSocket не подключен!");
+        if (!stompClient || !stompClient.connected) { // ✅ Проверяем, подключен ли WebSocket
+            console.error("❌ WebSocket is not connected yet!");
+            return;
         }
+
+        let messageContent = document.getElementById("message").value;
+
+        stompClient.send("/app/chat",
+            { "Authorization": "Bearer " + localStorage.getItem("token") }, // ✅ Добавляем токен в заголовки
+            JSON.stringify({ content: messageContent })
+        );
     }
 
-    function showMessage(message) {
-        const li = document.createElement("li");
-        li.textContent = `${message.sender || "Unknown"}: ${message.content} (${message.timestamp || "no timestamp"})`;
-        document.getElementById("messages").appendChild(li);
-    }
+    document.addEventListener("DOMContentLoaded", function () {
+        if (localStorage.getItem("token")) {
+            connectWebSocket();
+        }
+    });
 
-    window.onload = connect; // Подключаемся к WebSocket при загрузке страницы
+    document.getElementById("sendBtn").addEventListener("click", sendMessage); // ✅ Добавляем обработчик клика
 </script>
+
 </body>
 </html>

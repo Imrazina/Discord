@@ -1,41 +1,39 @@
 package dreamteam.com.chatplatform.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.messaging.simp.config.ChannelRegistration;
-import org.springframework.security.config.annotation.web.socket.EnableWebSocketSecurity;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-
+import org.springframework.web.socket.config.annotation.*;
 
 @Configuration
 @EnableWebSocketMessageBroker
-@EnableWebSocketSecurity
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
-        config.setApplicationDestinationPrefixes("/app");
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+
+    public WebSocketConfig(WebSocketAuthInterceptor webSocketAuthInterceptor) {
+        this.webSocketAuthInterceptor = webSocketAuthInterceptor;
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins("*"); // Разрешить все источники (временно)
-
+        logger.debug("Registering STOMP endpoints");
+        registry.addEndpoint("/ws").setAllowedOrigins("http://localhost:8000").withSockJS();
     }
 
-    @Autowired
-    private WebSocketAuthInterceptor webSocketAuthInterceptor;
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        logger.debug("Configuring message broker");
+        registry.enableSimpleBroker("/topic");
+        registry.setApplicationDestinationPrefixes("/app");
+    }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+        logger.debug("Configuring inbound channel with authentication interceptor");
         registration.interceptors(webSocketAuthInterceptor);
     }
-
-
 }
