@@ -15,49 +15,48 @@
 
 <script>
     console.log("📡 Token from localStorage:", localStorage.getItem("token"));
+
+    let stompClient = null; // 👈 Делаем переменную глобальной
+
     function connectWebSocket() {
         const socket = new SockJS('http://localhost:8082/ws');
-        const stompClient = Stomp.over(socket);
+        stompClient = Stomp.over(socket); // ✅ Сохраняем клиент в глобальную переменную
 
         const token = localStorage.getItem("token");
 
-        setTimeout(() => {
-            stompClient.connect(
-                { Authorization: "Bearer " + token },
-                function (frame) {
-                    console.log("✅ Connected to WebSocket!");
-                },
-                function (error) {
-                    console.error("❌ WebSocket Error: ", error);
-                }
-            );
-        }, 10);
-
-        stompClient.send("/app/chat",
-            { "Authorization": "Bearer " + localStorage.getItem("token") },
-            JSON.stringify({ content: "Привет, мир!" })
+        stompClient.connect(
+            { Authorization: "Bearer " + token },
+            function (frame) {
+                console.log("✅ Connected to WebSocket!");
+            },
+            function (error) {
+                console.error("❌ WebSocket Error: ", error);
+            }
         );
-
-
-
-
-        function sendMessage() {
-            let messageContent = document.getElementById("message").value;
-
-            stompClient.send("/app/chat", {}, JSON.stringify({
-                sender: "User",
-                content: messageContent,
-                token: localStorage.getItem("token") // 👈 Передаём токен внутри JSON
-            }));
-        }
     }
 
+    function sendMessage() {
+        if (!stompClient || !stompClient.connected) { // ✅ Проверяем, подключен ли WebSocket
+            console.error("❌ WebSocket is not connected yet!");
+            return;
+        }
+
+        let messageContent = document.getElementById("message").value;
+
+        stompClient.send("/app/chat",
+            { "Authorization": "Bearer " + localStorage.getItem("token") }, // ✅ Добавляем токен в заголовки
+            JSON.stringify({ content: messageContent })
+        );
+    }
 
     document.addEventListener("DOMContentLoaded", function () {
         if (localStorage.getItem("token")) {
             connectWebSocket();
         }
     });
+
+    document.getElementById("sendBtn").addEventListener("click", sendMessage); // ✅ Добавляем обработчик клика
 </script>
+
 </body>
 </html>
