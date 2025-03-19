@@ -1,46 +1,49 @@
 package dreamteam.com.chatplatform.controller;
 
 import dreamteam.com.chatplatform.model.ChatMessage;
-import dreamteam.com.chatplatform.model.User;
+import dreamteam.com.chatplatform.model.UserEntity;
 import dreamteam.com.chatplatform.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:8000")
 @Controller
 public class ChatController {
 
-    @Autowired
-    private UserRepository userRepository; // Добавьте репозиторий
+    private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
+    private final UserRepository userRepository;
+
+    public ChatController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @MessageMapping("/chat")
     @SendTo("/topic/messages")
     public ChatMessage sendMessage(@Payload Map<String, String> payload, Principal principal) {
         if (principal == null) {
-            System.out.println("SecurityContext пуст или не аутентифицирован!");
-            throw new RuntimeException("Пользователь не аутентифицирован");
+            logger.error("User is not authenticated");
+            throw new RuntimeException("User is not authenticated");
         }
 
         String username = principal.getName();
-        System.out.println("Сообщение от " + username + ": " + payload.get("content"));
+        logger.info("Received message from user: {}", username);
 
-        // Находим пользователя по имени
-        User sender = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+        UserEntity sender = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         ChatMessage message = new ChatMessage();
-        message.setSender(sender); // Передаем объект User
+        message.setSender(sender);
         message.setContent(payload.get("content"));
         message.setCreatedAt(LocalDateTime.now());
 
+        logger.info("Message sent: {}", message.getContent());
         return message;
     }
 }

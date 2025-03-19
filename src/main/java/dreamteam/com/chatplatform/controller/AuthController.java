@@ -1,22 +1,29 @@
 package dreamteam.com.chatplatform.controller;
 
-import dreamteam.com.chatplatform.model.User;
+import dreamteam.com.chatplatform.model.UserEntity;
 import dreamteam.com.chatplatform.repository.UserRepository;
-import dreamteam.com.chatplatform.config.JwtTokenProvider;
+import dreamteam.com.chatplatform.jwt.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @CrossOrigin(origins = "http://localhost:8000")
 public class AuthController {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Autowired
     private UserRepository userRepository;
@@ -25,30 +32,38 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private JwtUtil jwtUtil;
 
     @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Пользователь с таким именем уже существует!");
+    public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String email = request.get("email");
+        String password = request.get("password");
+
+        if (userRepository.findByUsername(username).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username already taken"));
         }
 
-        user.setPassword(passwordEncoder.encode(user.getPassword())); // Хэшируем пароль
-        userRepository.save(user);
+        UserEntity newUser = new UserEntity();
+        newUser.setUsername(username);
+        newUser.setEmail(email);
+        newUser.setPassword(passwordEncoder.encode(password));
+        userRepository.save(newUser);
 
-        return ResponseEntity.ok("Регистрация успешна!");
+        return ResponseEntity.ok(Map.of("message", "User registered successfully"));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
+    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String password = request.get("password");
 
-        if (existingUser.isPresent() && passwordEncoder.matches(user.getPassword(), existingUser.get().getPassword())) {
-            String token = jwtTokenProvider.generateToken(existingUser.get().getUsername(), Collections.singletonList("USER"));
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
 
-            return ResponseEntity.ok(Map.of("token", token));
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Неверный логин или пароль"));
-        }
+        // ✅ Загружаем пользователя из БД после аутентификации
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        String token = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(Map.of("token", token));
     }
 }

@@ -16,13 +16,13 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(cascade = CascadeType.ALL)  // Добавляем каскадное сохранение
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", nullable = false)
-    private User sender;
+    private UserEntity sender;
 
     @ManyToOne
     @JoinColumn(name = "receiver_id")
-    private User receiver;
+    private UserEntity receiver;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
