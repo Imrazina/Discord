@@ -14,21 +14,24 @@
 <a href="register.html"> registart</a>
 
 <script>
+    console.log("📡 Token from localStorage:", localStorage.getItem("token"));
     function connectWebSocket() {
         const socket = new SockJS('http://localhost:8082/ws');
         const stompClient = Stomp.over(socket);
 
         const token = localStorage.getItem("token");
 
-        stompClient.connect(
-            { Authorization: "Bearer " + token },
-            function (frame) {
-                console.log("✅ Connected to WebSocket!");
-            },
-            function (error) {
-                console.error("❌ WebSocket Error: ", error);
-            }
-        );
+        setTimeout(() => {
+            stompClient.connect(
+                { Authorization: "Bearer " + token },
+                function (frame) {
+                    console.log("✅ Connected to WebSocket!");
+                },
+                function (error) {
+                    console.error("❌ WebSocket Error: ", error);
+                }
+            );
+        }, 500);
     }
 
     // ✅ Открываем WebSocket сразу при загрузке index.html
