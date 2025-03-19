@@ -14,7 +14,9 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
+
     private Key getSigningKey() {
+        System.out.println("🔑 JWT Secret Key: " + secretKey);
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
@@ -23,12 +25,35 @@ public class JwtUtil {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 час
-                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)  // ✅ Теперь подпись совпадает!
                 .compact();
     }
 
+
     public String extractUsername(String token) {
-        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody().getSubject();
+        try {
+            System.out.println("📢 JwtUtil: Parsing token: " + token);
+            String username = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+            System.out.println("✅ JwtUtil: Extracted username: " + username);
+            return username;
+        } catch (ExpiredJwtException e) {
+            System.out.println("❌ JwtUtil: Token expired!");
+        } catch (UnsupportedJwtException e) {
+            System.out.println("❌ JwtUtil: Unsupported JWT!");
+        } catch (MalformedJwtException e) {
+            System.out.println("❌ JwtUtil: Malformed JWT!");
+        } catch (SignatureException e) {
+            System.out.println("❌ JwtUtil: Invalid signature!");
+        } catch (Exception e) {
+            System.out.println("❌ JwtUtil: Unknown error while parsing token!");
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public boolean validateToken(String token) {

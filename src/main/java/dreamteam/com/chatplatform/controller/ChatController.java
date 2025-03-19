@@ -27,6 +27,7 @@ public class ChatController {
     @MessageMapping("/chat")
     @SendTo("/topic/messages")
     public ChatMessage sendMessage(@Payload Map<String, String> payload, Principal principal) {
+
         if (principal == null) {
             logger.error("User is not authenticated");
             throw new RuntimeException("User is not authenticated");

@@ -31,25 +31,33 @@
                     console.error("❌ WebSocket Error: ", error);
                 }
             );
-        }, 500);
+        }, 10);
+
+        stompClient.send("/app/chat",
+            { "Authorization": "Bearer " + localStorage.getItem("token") },
+            JSON.stringify({ content: "Привет, мир!" })
+        );
+
+
+
+
+        function sendMessage() {
+            let messageContent = document.getElementById("message").value;
+
+            stompClient.send("/app/chat", {}, JSON.stringify({
+                sender: "User",
+                content: messageContent,
+                token: localStorage.getItem("token") // 👈 Передаём токен внутри JSON
+            }));
+        }
     }
 
-    // ✅ Открываем WebSocket сразу при загрузке index.html
+
     document.addEventListener("DOMContentLoaded", function () {
         if (localStorage.getItem("token")) {
             connectWebSocket();
         }
     });
-
-    function sendMessage() {
-        let messageContent = document.getElementById("message").value;
-
-        stompClient.send("/app/chat", {}, JSON.stringify({
-            sender: "User",
-            content: messageContent,
-            token: localStorage.getItem("token") // 👈 Передаём токен внутри JSON
-        }));
-    }
 </script>
 </body>
 </html>

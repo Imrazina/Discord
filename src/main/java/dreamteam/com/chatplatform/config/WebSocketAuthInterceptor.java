@@ -29,14 +29,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         this.userDetailsService = userDetailsService;
     }
 
+
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        logger.debug("Intercepting WebSocket message");
-
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor == null || StompCommand.CONNECT != accessor.getCommand()) {
             return message;
         }
+        System.out.println("🔒 SecurityContext user: " + SecurityContextHolder.getContext().getAuthentication());
 
         System.out.println("📡 WebSocket Headers: " + accessor.toNativeHeaderMap());
 
@@ -49,39 +49,34 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         String token = authHeaders.get(0).replace("Bearer ", "");
         System.out.println("🔑 Extracted token: " + token);
 
-        System.out.println("📡 WebSocket Headers: " + accessor.toNativeHeaderMap());
-        token = accessor.getLogin();
-        if (token == null || token.isEmpty()) {
-            logger.error("Authorization token is missing");
-            return message;
-        }
-
-        logger.info("Received token: {}", token);
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-
+// 👉 Добавляем ЛОГ перед вызовом extractUsername
+        System.out.println("📢 Calling extractUsername with token: " + token);
         String username = jwtUtil.extractUsername(token);
+
         if (username == null) {
-            logger.error("Invalid token: Username is null");
+            System.out.println("❌ Invalid token: Username is null");
             return message;
         }
+        System.out.println("🔒 SecurityContext user: " + SecurityContextHolder.getContext().getAuthentication());
+
+
+        System.out.println("🔍 Extracted username: " + username);  // ✅ Должно появиться в логах
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (userDetails == null) {
-            logger.error("User not found: {}", username);
+            System.out.println("❌ User not found: " + username);
             return message;
         }
-        System.out.println("🔑 Setting authentication for user: " + username);
+
+        System.out.println("✅ Found user in database: " + userDetails.getUsername());  // ✅ Должно появиться в логах
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
         accessor.setUser(authentication);
 
-        System.out.println("🔑 Setting authentication for user: " + username);
-
-        logger.info("User {} authenticated successfully", username);
+        System.out.println("✅ WebSocket Authenticated user: " + username);
         return message;
     }
+
 }
