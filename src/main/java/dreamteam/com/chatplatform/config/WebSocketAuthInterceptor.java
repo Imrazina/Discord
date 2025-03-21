@@ -25,7 +25,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
-    private final SimpUserRegistry simpUserRegistry = new DefaultSimpUserRegistry();  // ✅ Добавляем UserRegistry
+    private final SimpUserRegistry simpUserRegistry = new DefaultSimpUserRegistry();
 
     public WebSocketAuthInterceptor(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
