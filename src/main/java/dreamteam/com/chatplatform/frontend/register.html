@@ -22,19 +22,30 @@
         let email = document.getElementById('reg-email').value;
         let password = document.getElementById('reg-password').value;
 
-        let response = await fetch('http://localhost:8082/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        });
+        try {
+            let response = await fetch('http://localhost:8082/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
 
-        let data = await response.json();
+            let data = null;
 
-        if (response.ok) {
-            document.getElementById('register-msg').style.color = "green";
-            document.getElementById('register-msg').textContent = "Registration successful! You can login now.";
-        } else {
-            document.getElementById('register-msg').textContent = data.message || "Registration failed";
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            }
+
+            if (response.ok) {
+                document.getElementById('register-msg').style.color = "green";
+                document.getElementById('register-msg').textContent = "Registration successful! You can login now.";
+            } else {
+                document.getElementById('register-msg').style.color = "red";
+                document.getElementById('register-msg').textContent = data?.message || "Registration failed";
+            }
+        } catch (error) {
+            console.error("Ошибка при регистрации:", error);
+            document.getElementById('register-msg').textContent = "Unexpected error. Check console.";
         }
     });
 </script>
