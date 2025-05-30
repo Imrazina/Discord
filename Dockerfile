@@ -1,5 +1,5 @@
 # Этап 1: сборка проекта
-FROM maven:3.9.2-eclipse-temurin-21 as builder
+FROM maven:3.9.9-eclipse-temurin-21-alpine as builder
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
