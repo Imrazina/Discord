@@ -1,61 +1,207 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>WebSocket Chat</title>
+    <meta charset="UTF-8" />
+    <title>Chat в стиле Google Translate (упрощённый)</title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #fff;
+            color: #202124;
+        }
+        .chat-container {
+            display: flex;
+            gap: 20px;
+            max-width: 700px;
+            margin: auto;
+        }
+        .chat-box {
+            flex: 1;
+            border-radius: 8px;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 12px 15px;
+            box-sizing: border-box;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            font-size: 16px;
+            line-height: 1.5;
+            outline: none;
+        }
+        #sentBox {
+            border: 1.5px solid #4285F4; /* Google blue */
+            background: #e8f0fe;
+        }
+        #outputBox {
+            border: 1.5px solid #34a853; /* Google green */
+            background: #e6f4ea;
+            user-select: text;
+            white-space: pre-wrap;
+        }
+        h3 {
+            margin-top: 0;
+            font-weight: normal;
+            font-size: 1.1em;
+            color: #5f6368;
+        }
+        .chat-block {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        #sentBox.empty::before {
+            content: attr(data-placeholder);
+            color: #999;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
 </head>
 <body>
-<h2>WebSocket Chat</h2>
-<input type="text" id="message" placeholder="Enter message">
-<button id="sendBtn">Send</button> <!-- Добавил id -->
-<ul id="messages"></ul>
-<a href="register.html"> registart</a>
+
+<h2>Чат в стиле Google Translate (упрощённый)</h2>
+
+<div class="chat-container">
+    <div class="chat-block">
+        <h3>Вы пишете (чешский):</h3>
+        <div id="sentBox" class="chat-box empty" contenteditable="true" spellcheck="false" data-placeholder="Введите сообщение..."></div>
+    </div>
+
+    <div class="chat-block">
+        <h3>Перевод / Ответ собеседника:</h3>
+        <div id="outputBox" class="chat-box"></div>
+    </div>
+</div>
 
 <script>
-    console.log("📡 Token from localStorage:", localStorage.getItem("token"));
+    const sentBox = document.getElementById('sentBox');
+    const outputBox = document.getElementById('outputBox');
 
-    let stompClient = null; // 👈 Делаем переменную глобальной
+    const simpleDictionary = {
+        "ahoj": "привет",
+        "jak": "как",
+        "se": "ты",
+        "mas": "есть",
+        "dobrý": "хорошо",
+        "den": "день",
+        "díky": "спасибо",
+        "miluji": "люблю",
+        "tebe": "тебя",
+        "co": "что",
+        "je": "есть",
+        "to": "это"
+    };
+
+    function simpleTranslate(text) {
+        return text.split(/\b/).map(word => {
+            const lower = word.toLowerCase();
+            if (simpleDictionary[lower]) {
+                if (word[0] === word[0].toUpperCase()) {
+                    const translated = simpleDictionary[lower];
+                    return translated.charAt(0).toUpperCase() + translated.slice(1);
+                }
+                return simpleDictionary[lower];
+            }
+            return word;
+        }).join('');
+    }
+
+    let hasIncomingMessage = false;
+
+    function updateOutputWithTranslation() {
+        const text = sentBox.textContent.trim();
+        if (!text) {
+            sentBox.classList.add('empty');
+            outputBox.textContent = '';
+            return;
+        }
+        sentBox.classList.remove('empty');
+        // Если есть входящее сообщение — НЕ трогаем outputBox, оно уже показано
+        if (!hasIncomingMessage) {
+            outputBox.textContent = simpleTranslate(text);
+        }
+    }
+
+    sentBox.addEventListener('input', updateOutputWithTranslation);
+
+    let stompClient = null;
 
     function connectWebSocket() {
         const socket = new SockJS('http://localhost:8082/ws');
-        stompClient = Stomp.over(socket); // ✅ Сохраняем клиент в глобальную переменную
-
+        stompClient = Stomp.over(socket);
         const token = localStorage.getItem("token");
+        const currentUsername = localStorage.getItem("username");
 
         stompClient.connect(
             { Authorization: "Bearer " + token },
             function (frame) {
                 console.log("✅ Connected to WebSocket!");
+
+                stompClient.subscribe("/topic/messages", function (message) {
+                    const msg = JSON.parse(message.body);
+
+                    // Если сообщение пришло НЕ от меня, показываем его в outputBox
+                    if (msg.sender.username !== currentUsername) {
+                        hasIncomingMessage = true;
+                        outputBox.textContent = msg.content;
+                        outputBox.scrollTop = outputBox.scrollHeight;
+                    }
+                });
             },
             function (error) {
                 console.error("❌ WebSocket Error: ", error);
+                alert("Ошибка WebSocket подключения. Попробуйте обновить страницу.");
             }
         );
     }
 
     function sendMessage() {
-        if (!stompClient || !stompClient.connected) { // ✅ Проверяем, подключен ли WebSocket
-            console.error("❌ WebSocket is not connected yet!");
+        const content = sentBox.textContent.trim();
+        if (!content) return;
+
+        const token = localStorage.getItem("token");
+        const currentUsername = localStorage.getItem("username");
+        if (!token || !currentUsername) {
+            alert("Сначала авторизуйтесь");
             return;
         }
 
-        let messageContent = document.getElementById("message").value;
+        const receiver = localStorage.getItem("kiki");
+        const messagePayload = { content, receiver };
 
         stompClient.send("/app/chat",
-            { "Authorization": "Bearer " + localStorage.getItem("token") }, // ✅ Добавляем токен в заголовки
-            JSON.stringify({ content: messageContent })
+            { "Authorization": "Bearer " + token },
+            JSON.stringify(messagePayload)
         );
+
+        // После отправки сообщения очищаем input и показываем перевод заново
+        // sentBox.textContent = '';
+        hasIncomingMessage = false;
+        updateOutputWithTranslation();
+        sentBox.focus();
+
+        console.log("Сообщение отправлено:", content);
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        if (localStorage.getItem("token")) {
-            connectWebSocket();
+    sentBox.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
     });
 
-    document.getElementById("sendBtn").addEventListener("click", sendMessage); // ✅ Добавляем обработчик клика
+    document.addEventListener("DOMContentLoaded", function () {
+        if (localStorage.getItem("token") && localStorage.getItem("username")) {
+            connectWebSocket();
+            sentBox.focus();
+        } else {
+            alert("Сначала авторизуйтесь");
+        }
+    });
 </script>
 
 </body>

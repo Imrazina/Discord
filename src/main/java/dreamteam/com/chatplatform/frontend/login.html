@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Login</title>
 </head>
 <body>
 <h2>Login</h2>
 <form id="login-form">
-    <label>Username: <input type="text" id="username"></label><br>
-    <label>Password: <input type="password" id="password"></label><br>
+    <label>Username: <input type="text" id="username" required></label><br>
+    <label>Password: <input type="password" id="password" required></label><br>
     <button type="submit">Login</button>
 </form>
 <p id="error-msg" style="color: red;"></p>
@@ -17,22 +17,56 @@
     async function login(event) {
         event.preventDefault();
 
-        let username = document.getElementById('username').value;
-        let password = document.getElementById('password').value;
+        const errorMsg = document.getElementById('error-msg');
+        errorMsg.textContent = ""; // очищаем ошибки
 
-        let response = await fetch('http://localhost:8082/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
 
-        let data = await response.json();
+        if (!username || !password) {
+            errorMsg.textContent = "Пожалуйста, введите логин и пароль";
+            return;
+        }
 
-        if (response.ok) {
-            localStorage.setItem('token', data.token);
-            window.location.href = "index.html"; // ✅ Перенаправляем в чат
-        } else {
-            document.getElementById('error-msg').textContent = data.message || "Invalid credentials";
+        try {
+            const response = await fetch('http://localhost:8082/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const contentType = response.headers.get("content-type");
+            let data = null;
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            }
+
+            if (response.ok) {
+                if (!data || !data.token) {
+                    errorMsg.textContent = "Ошибка: сервер не вернул токен";
+                    return;
+                }
+
+                localStorage.setItem('token', data.token);
+
+                // Если сервер вернул username, используем его, иначе сохраняем введённый логин
+                if (data.username) {
+                    localStorage.setItem('username', data.username);
+                } else {
+                    localStorage.setItem('username', username);
+                }
+
+                // Перенаправление в чат
+                window.location.href = "index.html";
+            } else {
+                // Ошибка логина
+                errorMsg.textContent = data?.message || "Неверный логин или пароль";
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            errorMsg.textContent = "Ошибка сети или сервера. Попробуйте позже.";
         }
     }
 
