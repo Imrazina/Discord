@@ -1,13 +1,13 @@
-# Используем базовый образ OpenJDK
-FROM openjdk:21-jdk-slim
-
-# Устанавливаем рабочую директорию
+# Этап 1: сборка проекта
+FROM maven:3.9.2-eclipse-temurin-21 as builder
 WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Копируем JAR-файл в контейнер
-COPY target/chat-platform-0.0.1-SNAPSHOT.jar app.jar
-
+# Этап 2: запуск приложения
+FROM openjdk:21-jdk-slim
+WORKDIR /app
+COPY --from=builder /app/target/chat-platform-0.0.1-SNAPSHOT.jar app.jar
 COPY src/main/resources/db/migration /app/db/migration
-
-# Указываем команду для запуска приложения
 ENTRYPOINT ["java", "-jar", "app.jar"]
