@@ -18,12 +18,10 @@
         event.preventDefault();
 
         const errorMsg = document.getElementById('error-msg');
-        errorMsg.textContent = ""; // очищаем ошибки
+        errorMsg.textContent = "";
 
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value;
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
 
         if (!username || !password) {
             errorMsg.textContent = "Пожалуйста, введите логин и пароль";
@@ -31,42 +29,33 @@
         }
 
         try {
-            const response = await fetch('http://localhost:8082/auth/login', {
+            const response = await fetch('/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ username, password })
             });
 
-            const contentType = response.headers.get("content-type");
-            let data = null;
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Неверный логин или пароль");
             }
 
-            if (response.ok) {
-                if (!data || !data.token) {
-                    errorMsg.textContent = "Ошибка: сервер не вернул токен";
-                    return;
-                }
+            const data = await response.json();
 
-                localStorage.setItem('token', data.token);
-
-                // Если сервер вернул username, используем его, иначе сохраняем введённый логин
-                if (data.username) {
-                    localStorage.setItem('username', data.username);
-                } else {
-                    localStorage.setItem('username', username);
-                }
-
-                // Перенаправление в чат
-                window.location.href = "index.html";
-            } else {
-                // Ошибка логина
-                errorMsg.textContent = data?.message || "Неверный логин или пароль";
+            if (!data.token) {
+                throw new Error("Сервер не вернул токен");
             }
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username || username);
+
+            window.location.href = "index.html";
         } catch (error) {
             console.error("Login error:", error);
-            errorMsg.textContent = "Ошибка сети или сервера. Попробуйте позже.";
+            errorMsg.textContent = error.message || "Ошибка сети или сервера";
         }
     }
 

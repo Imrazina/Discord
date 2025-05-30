@@ -18,34 +18,40 @@
     document.getElementById('register-form').addEventListener('submit', async function(event) {
         event.preventDefault();
 
-        let username = document.getElementById('reg-username').value;
-        let email = document.getElementById('reg-email').value;
-        let password = document.getElementById('reg-password').value;
+        const msgElement = document.getElementById('register-msg');
+        msgElement.textContent = "";
+        msgElement.style.color = "red";
+
+        const username = document.getElementById('reg-username').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+
+        if (!username || !password) {
+            msgElement.textContent = "Username and password are required";
+            return;
+        }
 
         try {
-            let response = await fetch('http://localhost:8082/auth/register', {
+            const response = await fetch('/auth/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ username, email, password })
             });
 
-            let data = null;
+            const data = await response.json();
 
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || "Registration failed");
             }
 
-            if (response.ok) {
-                document.getElementById('register-msg').style.color = "green";
-                document.getElementById('register-msg').textContent = "Registration successful! You can login now.";
-            } else {
-                document.getElementById('register-msg').style.color = "red";
-                document.getElementById('register-msg').textContent = data?.message || "Registration failed";
-            }
+            msgElement.style.color = "green";
+            msgElement.textContent = "Registration successful! You can login now.";
         } catch (error) {
-            console.error("Ошибка при регистрации:", error);
-            document.getElementById('register-msg').textContent = "Unexpected error. Check console.";
+            console.error("Registration error:", error);
+            msgElement.textContent = error.message || "Unexpected error occurred";
         }
     });
 </script>
