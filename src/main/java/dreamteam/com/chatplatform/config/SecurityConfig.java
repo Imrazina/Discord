@@ -44,17 +44,21 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
-                                "/actuator/health",
-                                "/auth/**",
-                                "/ws/**",
-                                "/topic/**",
-                                "/app/**"
+                                "/health",
+                                "/index.html",
+                                "/login.html",
+                                "/register.html",
+                                "/static/**",
+                                "/actuator/health"
                         ).permitAll()
+                        .requestMatchers("/auth/**", "/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .formLogin(form -> form
+                        .loginPage("/login.html")
+                        .permitAll()
+                );
 
-        logger.info("Security filter chain configured successfully");
         return http.build();
     }
 
