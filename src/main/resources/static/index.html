@@ -2,56 +2,160 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <title>Chat в стиле Google Translate (упрощённый)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат-переводчик | Переводчик текста с чешского на русский</title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #fff;
-            color: #202124;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        .chat-container {
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            color: #3c4043;
+            line-height: 1.5;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: white;
+            padding: 12px 24px;
+            border-bottom: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            color: #4285F4;
+            font-size: 22px;
+            font-weight: 500;
+            margin-right: 30px;
+        }
+        nav {
             display: flex;
             gap: 20px;
-            max-width: 700px;
-            margin: auto;
+        }
+        nav a {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        nav a:hover {
+            color: #1a73e8;
+        }
+        main {
+            flex: 1;
+            max-width: 1000px;
+            margin: 30px auto;
+            width: 100%;
+            padding: 0 20px;
+        }
+        .page-title {
+            font-size: 32px;
+            font-weight: 400;
+            margin-bottom: 24px;
+            color: #202124;
+        }
+        .translator-container {
+            display: flex;
+            gap: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 2px 6px 2px rgba(60,64,67,0.15);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .translator-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .language-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #dadce0;
+            margin-bottom: 10px;
+        }
+        .language-name {
+            font-size: 14px;
+            color: #5f6368;
+        }
+        .swap-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #1a73e8;
+            padding: 5px;
         }
         .chat-box {
-            flex: 1;
-            border-radius: 8px;
-            min-height: 300px;
+            min-height: 200px;
             max-height: 400px;
             overflow-y: auto;
-            padding: 12px 15px;
-            box-sizing: border-box;
-            background: #f9f9f9;
-            white-space: pre-wrap;
+            padding: 12px;
             font-size: 16px;
             line-height: 1.5;
             outline: none;
-        }
-        #sentBox {
-            border: 1.5px solid #4285F4; /* Google blue */
-            background: #e8f0fe;
-        }
-        #outputBox {
-            border: 1.5px solid #34a853; /* Google green */
-            background: #e6f4ea;
-            user-select: text;
             white-space: pre-wrap;
         }
-        h3 {
-            margin-top: 0;
-            font-weight: normal;
-            font-size: 1.1em;
+        #sentBox {
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            background: white;
+            resize: none;
+        }
+        #outputBox {
+            background-color: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            user-select: text;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .send-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 24px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .send-btn:hover {
+            background-color: #1765cc;
+        }
+        .info-text {
+            font-size: 12px;
             color: #5f6368;
         }
-        .chat-block {
+        footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-top: 1px solid #dadce0;
+            text-align: center;
+            font-size: 12px;
+            color: #5f6368;
+        }
+        .footer-links {
             display: flex;
-            flex-direction: column;
-            flex: 1;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #5f6368;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            color: #1a73e8;
         }
         #sentBox.empty::before {
             content: attr(data-placeholder);
@@ -59,23 +163,87 @@
             pointer-events: none;
             user-select: none;
         }
+        .translation-history {
+            margin-top: 30px;
+        }
+        .history-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #202124;
+        }
+        .history-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3);
+        }
     </style>
 </head>
 <body>
 
-<h2>Чат в стиле Google Translate (упрощённый)</h2>
+<header>
+    <div class="logo">Чат-переводчик</div>
+    <nav>
+        <a href="#">Главная</a>
+        <a href="#">О сервисе</a>
+        <a href="#">Поддержка</a>
+        <a href="#">Блог</a>
+    </nav>
+</header>
 
-<div class="chat-container">
-    <div class="chat-block">
-        <h3>Вы пишете (чешский):</h3>
-        <div id="sentBox" class="chat-box empty" contenteditable="true" spellcheck="false" data-placeholder="Введите сообщение..."></div>
+<main>
+    <h1 class="page-title">Онлайн переводчик с чешского на русский</h1>
+
+    <div class="translator-container">
+        <div class="translator-box">
+            <div class="language-selector">
+                <span class="language-name">Чешский</span>
+                <button class="swap-btn" title="Поменять языки местами">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 17.01V10H14V17.01H11L15 21L19 17.01H16ZM9 3L5 6.99H8V14H10V6.99H13L9 3Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="sentBox" class="chat-box empty" contenteditable="true" spellcheck="false" data-placeholder="Введите текст..."></div>
+            <div class="controls">
+                <span class="info-text">Оригинал текста</span>
+<!--                <button class="send-btn" onclick="sendMessage()">Отправить</button>-->
+            </div>
+        </div>
+
+        <div class="translator-box">
+            <div class="language-selector">
+                <span class="language-name">Русский</span>
+            </div>
+            <div id="outputBox" class="chat-box"></div>
+            <div class="controls">
+                <span class="info-text">Перевод текста</span>
+<!--                <button class="send-btn" disabled style="background-color: #dadce0;">Ответить</button>-->
+            </div>
+        </div>
     </div>
 
-    <div class="chat-block">
-        <h3>Перевод / Ответ собеседника:</h3>
-        <div id="outputBox" class="chat-box"></div>
+    <div class="translation-history">
+        <h2 class="history-title">История переводов</h2>
+        <div class="history-item">
+            <strong>Ahoj, jak se máš?</strong> → <em>Привет, как ты есть?</em>
+        </div>
+        <div class="history-item">
+            <strong>Díky, jsem v pořádku.</strong> → <em>Спасибо, я в порядке.</em>
+        </div>
     </div>
-</div>
+</main>
+
+<footer>
+    <div class="footer-links">
+        <a href="#">О компании</a>
+        <a href="#">Конфиденциальность</a>
+        <a href="#">Условия использования</a>
+        <a href="#">Справка</a>
+    </div>
+    <div>© 2023 Чат-переводчик. Сервис предоставляется бесплатно.</div>
+</footer>
 
 <script>
     const sentBox = document.getElementById('sentBox');
@@ -86,14 +254,23 @@
         "jak": "как",
         "se": "ты",
         "mas": "есть",
+        "máš": "есть",
         "dobrý": "хорошо",
         "den": "день",
         "díky": "спасибо",
+        "děkuji": "спасибо",
         "miluji": "люблю",
         "tebe": "тебя",
         "co": "что",
         "je": "есть",
-        "to": "это"
+        "to": "это",
+        "prosím": "пожалуйста",
+        "ano": "да",
+        "ne": "нет",
+        "rozumím": "понимаю",
+        "pozdrav": "приветствие",
+        "česky": "чешский",
+        "rusky": "русский"
     };
 
     function simpleTranslate(text) {
@@ -120,7 +297,6 @@
             return;
         }
         sentBox.classList.remove('empty');
-        // Если есть входящее сообщение — НЕ трогаем outputBox, оно уже показано
         if (!hasIncomingMessage) {
             outputBox.textContent = simpleTranslate(text);
         }
@@ -144,7 +320,6 @@
                 stompClient.subscribe("/topic/messages", function (message) {
                     const msg = JSON.parse(message.body);
 
-                    // Если сообщение пришло НЕ от меня, показываем его в outputBox
                     if (msg.sender.username !== currentUsername) {
                         hasIncomingMessage = true;
                         outputBox.textContent = msg.content;
@@ -154,7 +329,7 @@
             },
             function (error) {
                 console.error("❌ WebSocket Error: ", error);
-                alert("Ошибка WebSocket подключения. Попробуйте обновить страницу.");
+                alert("Ошибка подключения. Пожалуйста, проверьте интернет-соединение и попробуйте снова.");
             }
         );
     }
@@ -166,7 +341,7 @@
         const token = localStorage.getItem("token");
         const currentUsername = localStorage.getItem("username");
         if (!token || !currentUsername) {
-            alert("Сначала авторизуйтесь");
+            alert("Для отправки сообщений необходимо авторизоваться");
             return;
         }
 
@@ -178,10 +353,16 @@
             JSON.stringify(messagePayload)
         );
 
-        // После отправки сообщения очищаем input и показываем перевод заново
-        // sentBox.textContent = '';
+        // Добавляем в историю
+        const history = document.querySelector('.translation-history');
+        const newItem = document.createElement('div');
+        newItem.className = 'history-item';
+        newItem.innerHTML = `<strong>${content}</strong> → <em>${simpleTranslate(content)}</em>`;
+        history.appendChild(newItem);
+
         hasIncomingMessage = false;
-        updateOutputWithTranslation();
+        sentBox.textContent = '';
+        sentBox.classList.add('empty');
         sentBox.focus();
 
         console.log("Сообщение отправлено:", content);
@@ -199,7 +380,7 @@
             connectWebSocket();
             sentBox.focus();
         } else {
-            alert("Сначала авторизуйтесь");
+            alert("Для использования переводчика необходимо авторизоваться");
         }
     });
 </script>
