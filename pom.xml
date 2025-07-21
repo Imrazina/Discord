@@ -19,10 +19,21 @@
         <postgresql.version>42.7.5</postgresql.version> <!-- Явное указание версии PostgreSQL -->
         <lombok.version>1.18.36</lombok.version> <!-- Явное указание версии Lombok -->
     </properties>
+    <repositories>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com/</url>
+        </repository>
+    </repositories>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.70</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -40,6 +51,11 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.11.5</version>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

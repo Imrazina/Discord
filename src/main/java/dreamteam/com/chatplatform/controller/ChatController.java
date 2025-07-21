@@ -1,9 +1,13 @@
 package dreamteam.com.chatplatform.controller;
 
+import dreamteam.com.chatplatform.Service.PushNotificationService;
 import dreamteam.com.chatplatform.model.ChatMessage;
+import dreamteam.com.chatplatform.model.PushSubscription;
 import dreamteam.com.chatplatform.model.UserEntity;
 import dreamteam.com.chatplatform.repository.MessageRepository;
+import dreamteam.com.chatplatform.repository.PushSubscriptionRepository;
 import dreamteam.com.chatplatform.repository.UserRepository;
+import nl.martijndwars.webpush.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -19,12 +23,20 @@ import java.util.Map;
 public class ChatController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
-    private final UserRepository userRepository;
-    private final MessageRepository messageRepository;  // ✅ Подключаем репозиторий сообщений
 
-    public ChatController(UserRepository userRepository, MessageRepository messageRepository) {
+    private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final PushNotificationService pushNotificationService;
+
+    public ChatController(UserRepository userRepository,
+                          MessageRepository messageRepository,
+                          PushSubscriptionRepository pushSubscriptionRepository,
+                          PushNotificationService pushNotificationService) {
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
+        this.pushSubscriptionRepository = pushSubscriptionRepository;
+        this.pushNotificationService = pushNotificationService;
     }
 
     @MessageMapping("/chat")
@@ -38,17 +50,14 @@ public class ChatController {
         String username = principal.getName();
         logger.info("🟢 Received message from user: {}", username);
 
-        // ✅ Логируем загрузку sender
         UserEntity sender = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
                     logger.error("❌ User not found in DB: {}", username);
                     return new RuntimeException("User not found");
                 });
 
-        logger.info("✅ Sender loaded from DB: {} (id: {})", sender.getUsername(), sender.getId());
-
-        // ✅ Логируем загрузку receiver
         String receiverUsername = payload.get("receiver");
+        logger.info("📥 Receiver from payload: {}", receiverUsername);
         UserEntity receiver = null;
         if (receiverUsername != null && !receiverUsername.isEmpty()) {
             receiver = userRepository.findByUsername(receiverUsername)
@@ -56,22 +65,15 @@ public class ChatController {
                         logger.error("❌ Receiver not found in DB: {}", receiverUsername);
                         return new RuntimeException("Receiver not found");
                     });
-            logger.info("✅ Receiver loaded from DB: {} (id: {})", receiver.getUsername(), receiver.getId());
+            logger.info("✅ Receiver loaded from DB: {}", receiver.getUsername());
         }
 
-        // ✅ Создаем сообщение
         ChatMessage message = new ChatMessage();
         message.setSender(sender);
         message.setReceiver(receiver);
         message.setContent(payload.get("content"));
         message.setCreatedAt(LocalDateTime.now());
 
-        logger.info("📝 Creating new message: sender={}, receiver={}, content='{}'",
-                sender.getUsername(),
-                (receiver != null ? receiver.getUsername() : "null"),
-                message.getContent());
-
-        // ✅ Логируем перед сохранением
         try {
             message = messageRepository.save(message);
             logger.info("✅ Message saved to DB with id: {}", message.getId());
@@ -80,6 +82,37 @@ public class ChatController {
             throw e;
         }
 
+        // 🔔 Push уведомление
+        if (receiver != null) {
+            final UserEntity finalReceiver = receiver; // безопасно, не меняется
+            final UserEntity finalSender = sender;
+            final ChatMessage finalMessage = message;
+
+            pushSubscriptionRepository.findByUsername(finalReceiver.getUsername())
+                    .ifPresent(subscriptionEntity -> {
+                        try {
+                            Subscription subscription = new Subscription(
+                                    subscriptionEntity.getEndpoint(),
+                                    new Subscription.Keys(
+                                            subscriptionEntity.getP256dh(),
+                                            subscriptionEntity.getAuth()
+                                    )
+                            );
+
+                            String jsonPayload = String.format(
+                                    "{\"title\":\"%s\",\"body\":\"%s\"}",
+                                    finalSender.getUsername(),
+                                    finalMessage.getContent()
+                            );
+                            logger.info("📦 Payload для push: {}", jsonPayload);
+                            pushNotificationService.sendNotification(subscription, jsonPayload);
+                            logger.info("📤 Push sent to {}", finalReceiver.getUsername());
+
+                        } catch (Exception e) {
+                            logger.warn("⚠️ Push sending failed: {}", e.getMessage());
+                        }
+                    });
+        }
         return message;
     }
 }

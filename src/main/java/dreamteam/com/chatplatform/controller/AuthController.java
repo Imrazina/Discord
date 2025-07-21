@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -49,7 +50,7 @@ public class AuthController {
         newUser.setEmail(email);
         newUser.setPassword(passwordEncoder.encode(password));
         userRepository.save(newUser);
-
+        newUser.setRole("USER");
         return ResponseEntity.ok(Map.of("message", "User registered successfully"));
     }
 

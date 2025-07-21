@@ -307,8 +307,9 @@
     let stompClient = null;
 
     function connectWebSocket() {
-        const socket = new SockJS('/ws');
+        const socket = new SockJS('http://localhost:8082/ws');
         stompClient = Stomp.over(socket);
+
         const token = localStorage.getItem("token");
         const currentUsername = localStorage.getItem("username");
 
@@ -341,7 +342,8 @@
         const token = localStorage.getItem("token");
         const currentUsername = localStorage.getItem("username");
         if (!token || !currentUsername) {
-            alert("Для отправки сообщений необходимо авторизоваться");
+            alert("Для использования приложения необходимо авторизоваться");
+            window.location.href = '/login.html';
             return;
         }
 
@@ -353,7 +355,6 @@
             JSON.stringify(messagePayload)
         );
 
-        // Добавляем в историю
         const history = document.querySelector('.translation-history');
         const newItem = document.createElement('div');
         newItem.className = 'history-item';
@@ -381,9 +382,9 @@
             sentBox.focus();
         } else {
             alert("Для использования переводчика необходимо авторизоваться");
+            window.location.href = '/login.html';
         }
     });
 </script>
-
 </body>
 </html>
