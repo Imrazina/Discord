@@ -88,10 +88,27 @@
         return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
     }
 
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'COPY_TEXT') {
+            const text = event.data.text;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    console.log('Текст скопирован:', text);
+                    alert('Сообщение скопировано в буфер обмена!');
+                })
+                .catch(err => {
+                    console.error('Ошибка при копировании:', err);
+                    alert('Не удалось скопировать сообщение');
+                });
+        }
+    });
+
     // Инициализация при загрузке
     window.addEventListener('load', () => {
         if ('serviceWorker' in navigator) {
             initPushNotifications().catch(console.error);
         }
     });
+
+
 </script>

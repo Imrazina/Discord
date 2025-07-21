@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DEBUG COPY</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        #debug {
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<h2>DEBUG MODE</h2>
+<div id="debug">Ждем данных...</div>
+<button id="copyBtn">СКОПИРОВАТЬ</button>
+
+<script>
+    const debugEl = document.getElementById('debug');
+    const copyBtn = document.getElementById('copyBtn');
+    let receivedText = '';
+
+    // 1. Логируем полученные параметры
+    const params = new URLSearchParams(location.search);
+    receivedText = decodeURIComponent(params.get('text') || 'EMPTY_TEXT_PARAM');
+    debugEl.textContent = `Полученный текст:\n"${receivedText}"\n\nДлина: ${receivedText.length} символов`;
+
+    // 2. Проверяем Clipboard API
+    debugEl.textContent += '\n\nClipboard API доступен: ' +
+        (!!navigator.clipboard ? 'ДА' : 'НЕТ');
+
+    // 3. Проверяем разрешения
+    navigator.permissions.query({name: 'clipboard-write'})
+        .then(perm => {
+            debugEl.textContent += `\nРазрешение clipboard-write: ${perm.state}`;
+        })
+        .catch(err => {
+            debugEl.textContent += `\nОшибка проверки разрешений: ${err.message}`;
+        });
+
+    // 4. Обработчик копирования
+    copyBtn.addEventListener('click', async () => {
+        try {
+            debugEl.textContent += '\n\nПытаемся скопировать...';
+
+            await navigator.clipboard.writeText(receivedText);
+            debugEl.textContent += '\n✓ Успешно скопировано!';
+
+            copyBtn.textContent = 'СКОПИРОВАНО!';
+            copyBtn.style.background = '#2196F3';
+
+            setTimeout(() => window.close(), 1000);
+        } catch (err) {
+            debugEl.textContent += `\n❌ Ошибка копирования: ${err.message}`;
+            console.error('Full error:', err);
+            copyBtn.textContent = 'ОШИБКА!';
+            copyBtn.style.background = '#f44336';
+        }
+    });
+</script>
+</body>
+</html>
