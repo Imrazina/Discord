@@ -14,7 +14,6 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
-
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -43,29 +42,29 @@ public class ChatController {
     @SendTo("/topic/messages")
     public ChatMessage sendMessage(@Payload Map<String, String> payload, Principal principal) {
         if (principal == null) {
-            logger.error("❌ User is not authenticated!");
+            logger.error(" User is not authenticated!");
             throw new RuntimeException("User is not authenticated");
         }
 
         String username = principal.getName();
-        logger.info("🟢 Received message from user: {}", username);
+        logger.info(" Received message from user: {}", username);
 
         UserEntity sender = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
-                    logger.error("❌ User not found in DB: {}", username);
+                    logger.error(" User not found in DB: {}", username);
                     return new RuntimeException("User not found");
                 });
 
         String receiverUsername = payload.get("receiver");
-        logger.info("📥 Receiver from payload: {}", receiverUsername);
+        logger.info(" Receiver from payload: {}", receiverUsername);
         UserEntity receiver = null;
         if (receiverUsername != null && !receiverUsername.isEmpty()) {
             receiver = userRepository.findByUsername(receiverUsername)
                     .orElseThrow(() -> {
-                        logger.error("❌ Receiver not found in DB: {}", receiverUsername);
+                        logger.error(" Receiver not found in DB: {}", receiverUsername);
                         return new RuntimeException("Receiver not found");
                     });
-            logger.info("✅ Receiver loaded from DB: {}", receiver.getUsername());
+            logger.info(" Receiver loaded from DB: {}", receiver.getUsername());
         }
 
         ChatMessage message = new ChatMessage();
@@ -76,15 +75,14 @@ public class ChatController {
 
         try {
             message = messageRepository.save(message);
-            logger.info("✅ Message saved to DB with id: {}", message.getId());
+            logger.info(" Message saved to DB with id: {}", message.getId());
         } catch (Exception e) {
-            logger.error("❌ Error saving message to DB!", e);
+            logger.error(" Error saving message to DB!", e);
             throw e;
         }
 
-        // 🔔 Push уведомление
         if (receiver != null) {
-            final UserEntity finalReceiver = receiver; // безопасно, не меняется
+            final UserEntity finalReceiver = receiver;
             final UserEntity finalSender = sender;
             final ChatMessage finalMessage = message;
 
@@ -104,12 +102,12 @@ public class ChatController {
                                     finalSender.getUsername(),
                                     finalMessage.getContent()
                             );
-                            logger.info("📦 Payload для push: {}", jsonPayload);
+                            logger.info(" Payload для push: {}", jsonPayload);
                             pushNotificationService.sendNotification(subscription, jsonPayload);
-                            logger.info("📤 Push sent to {}", finalReceiver.getUsername());
+                            logger.info(" Push sent to {}", finalReceiver.getUsername());
 
                         } catch (Exception e) {
-                            logger.warn("⚠️ Push sending failed: {}", e.getMessage());
+                            logger.warn(" Push sending failed: {}", e.getMessage());
                         }
                     });
         }

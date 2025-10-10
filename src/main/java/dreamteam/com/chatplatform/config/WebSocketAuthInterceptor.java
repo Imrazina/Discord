@@ -39,18 +39,18 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        System.out.println("🔒 SecurityContext before auth: " + SecurityContextHolder.getContext().getAuthentication());
+        System.out.println(" SecurityContext before auth: " + SecurityContextHolder.getContext().getAuthentication());
 
         List<String> authHeaders = accessor.getNativeHeader("Authorization");
         if (authHeaders == null || authHeaders.isEmpty()) {
-            System.out.println("❌ Authorization header is missing");
+            System.out.println(" Authorization header is missing");
             return message;
         }
 
         String token = authHeaders.get(0).replace("Bearer ", "");
         String username = jwtUtil.extractUsername(token);
         if (username == null) {
-            System.out.println("❌ Invalid token: Username is null");
+            System.out.println(" Invalid token: Username is null");
             return message;
         }
 
@@ -58,12 +58,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-        // ✅ Устанавливаем аутентификацию в SecurityContextHolder
+        //  Устанавливаем аутентификацию в SecurityContextHolder
         SecurityContextHolder.getContext().setAuthentication(authentication);
         accessor.setUser(authentication);
 
-        System.out.println("🔒 SecurityContext after auth: " + SecurityContextHolder.getContext().getAuthentication());
-        System.out.println("✅ WebSocket Authenticated user: " + username);
+        System.out.println(" SecurityContext after auth: " + SecurityContextHolder.getContext().getAuthentication());
+        System.out.println(" WebSocket Authenticated user: " + username);
 
         return message;
     }

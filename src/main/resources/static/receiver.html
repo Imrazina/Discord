@@ -1,3 +1,4 @@
+<button id="enableCopyHelper">Включить автокопирование</button>
 <script>
     // Конфигурация
     const PUBLIC_KEY = 'BBoYaoc8zDDFcRjeUDuO4HI15lrxOhtqEgdWfcfkn5vqTHmUeZc_DU6yodFwDNcthvOyKSK-K_Us9xdEDVYR_5I';
@@ -109,6 +110,20 @@
             initPushNotifications().catch(console.error);
         }
     });
+    let copyWindow = null;
 
+    document.getElementById('enableCopyHelper').addEventListener('click', () => {
+        if (!copyWindow || copyWindow.closed) {
+            copyWindow = window.open(
+                '/copy.html',
+                'copyWindow',
+                'width=1,height=1,left=9999,top=9999'
+            );
+
+            console.log('[Popup] copy.html открыт в фоне');
+        } else {
+            console.log('[Popup] copy.html уже открыт');
+        }
+    });
 
 </script>

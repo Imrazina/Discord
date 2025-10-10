@@ -61,7 +61,7 @@ public class AuthController {
 
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
 
-        // ✅ Загружаем пользователя из БД после аутентификации
+        //  Загружаем пользователя из БД после аутентификации
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String token = jwtUtil.generateToken(userDetails);
 

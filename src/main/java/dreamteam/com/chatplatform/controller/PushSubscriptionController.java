@@ -26,11 +26,11 @@ public class PushSubscriptionController {
             Authentication authentication
     ) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            System.out.println("🚨 Unauthenticated access attempt");
+            System.out.println(" Unauthenticated access attempt");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        System.out.println("🔔 Authenticated user: " + authentication.getName());
+        System.out.println(" Authenticated user: " + authentication.getName());
 
         Map<String, Object> keys = (Map<String, Object>) request.get("keys");
         String endpoint = (String) request.get("endpoint");
@@ -59,11 +59,11 @@ public class PushSubscriptionController {
                 () -> repository.save(subscription)
         );
 
-        System.out.println("✅ Подписка сохранена для пользователя: " + username);
+        System.out.println(" Подписка сохранена для пользователя: " + username);
         Authentication autho = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("👤 Principal: " + autho.getPrincipal());
-        System.out.println("👮 Authorities: " + autho.getAuthorities());
-        System.out.println("🔐 Authenticated: " + autho.isAuthenticated());
+        System.out.println(" Principal: " + autho.getPrincipal());
+        System.out.println(" Authorities: " + autho.getAuthorities());
+        System.out.println(" Authenticated: " + autho.isAuthenticated());
 
         return ResponseEntity.ok().build();
     }

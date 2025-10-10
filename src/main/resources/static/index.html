@@ -316,7 +316,7 @@
         stompClient.connect(
             { Authorization: "Bearer " + token },
             function (frame) {
-                console.log("✅ Connected to WebSocket!");
+                console.log(" Connected to WebSocket!");
 
                 stompClient.subscribe("/topic/messages", function (message) {
                     const msg = JSON.parse(message.body);
@@ -329,7 +329,7 @@
                 });
             },
             function (error) {
-                console.error("❌ WebSocket Error: ", error);
+                console.error(" WebSocket Error: ", error);
                 alert("Ошибка подключения. Пожалуйста, проверьте интернет-соединение и попробуйте снова.");
             }
         );
